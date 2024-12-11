@@ -111,96 +111,17 @@ class AutomatedAnalysis:
         
         return analysis
     
-    def _call_llm(self, messages: List[Dict[str, str]], functions: List[Dict] = None):
         """
         Call the OpenAI-compatible LLM via AI Proxy with robust error handling.
-        
+
+        This method attempts to call the specified LLM endpoint(s) with the given
+        messages and optional function definitions. If all endpoints fail, it
+        returns a fallback narrative.
+
         :param messages: List of message dictionaries
         :param functions: Optional list of function definitions
         :return: LLM response or fallback narrative
         """
-        # List of potential AI Proxy endpoints
-        endpoints = [
-            "http://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
-        ]
-        
-        # Fallback narrative generator
-        def generate_fallback_narrative(analysis):
-            return f"""# Data Detective's Emergency Report
-
-## Unexpected Narrative Generation Challenge
-
-Our data storytelling mission encountered an unexpected roadblock. While our analytical engines are fully operational, our narrative generation system is temporarily offline.
-
-### Preliminary Insights
-
-**Dataset Snapshot:**
-- Total Rows: {analysis.get('basic_info', {}).get('total_rows', 'N/A')}
-- Total Columns: {analysis.get('basic_info', {}).get('total_columns', 'N/A')}
-
-### Investigator's Notes
-
-Despite the technical hiccup, our data analysis proceeded successfully. The visualizations and core insights remain intact.
-
-**Recommended Next Steps:**
-1. Verify AI Proxy configuration
-2. Check network connectivity
-3. Validate API tokens
-4. Retry narrative generation
-
-*Stay curious, stay analytical!*
-"""
-        
-        try:
-            for endpoint in endpoints:
-                try:
-                    logger.info(f"Attempting LLM call to {endpoint}")
-                    
-                    # Prepare request payload
-                    payload = {
-                        "model": "gpt-4o-mini",
-                        "messages": messages,
-                        "max_tokens": 1000,
-                        "temperature": 0.7
-                    }
-                    
-                    if functions:
-                        payload["functions"] = functions
-                    
-                    # Make the API call
-                    response = httpx.post(
-                        endpoint, 
-                        headers={
-                            "Authorization": f"Bearer {self.aiproxy_token}",
-                            "Content-Type": "application/json"
-                        },
-                        json=payload,
-                        timeout=30.0  # 30-second timeout
-                    )
-                    
-                    # Check response status
-                    response.raise_for_status()
-                    
-                    # Parse and return response
-                    result = response.json()
-                    return result['choices'][0]['message']['content']
-                
-                except httpx.HTTPStatusError as http_err:
-                    logger.warning(f"HTTP error with {endpoint}: {http_err}")
-                    continue
-                
-                except httpx.RequestError as req_err:
-                    logger.warning(f"Request error with {endpoint}: {req_err}")
-                    continue
-            
-            # If all endpoints fail, log and return fallback
-            logger.error("All LLM endpoints failed")
-            return generate_fallback_narrative(self.analysis)
-        
-        except Exception as e:
-            logger.error(f"Unexpected error in LLM call: {e}")
-            logger.error(traceback.format_exc())
-            return generate_fallback_narrative(self.analysis)
     
     def _create_visualizations(self, analysis: Dict[str, Any]):
         """
